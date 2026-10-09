@@ -53,17 +53,17 @@ remediation scan of LSASS, not the simulated attacker.
 
 **The finding:** the lab's original Sysmon rule for this technique
 (`attack-t1003-lsass-access` in `sysmonconfig.xml`) matches any process
-accessing `lsass.exe`, with no filter on the source process. Left as-is,
-this rule would have logged Defender's own remediation activity as a
-"detected" attacker technique — a false positive baked directly into the
-detection logic, discovered by actually running the attack rather than by
-inspecting the rule on paper.
+accessing `lsass.exe`, with no filter on the source process. This collection filter correctly retained the event for analysis. Treating
+every collected LSASS access as attacker detection, however, would have
+misclassified Defender's own remediation activity. Running the exercise
+surfaced the need to filter defensive activity in the Sigma detection logic.
 
 **The fix:**
 [`t1003_001_lsass_access_non_defender.yml`](../detections/sigma/t1003_001_lsass_access_non_defender.yml)
 adds an explicit exclusion for `SourceImage` paths under
-`\Windows Defender\`, so the rule only fires on non-Defender processes
-accessing LSASS.
+`\Windows Defender\`, so events with that source-path fragment are excluded. This path-based
+filter addresses the observed Defender activity; it does not verify process
+identity or establish production readiness.
 
 **How this is scored:** because the technique was stopped by an existing
 preventive control (Defender) before it could execute, and no attacker
@@ -89,11 +89,15 @@ technique. Not a scored result here, but worth noting: adversary emulation
 tooling itself generates real telemetry, and a detection engineer needs to
 be able to distinguish tooling artifacts from the techniques under test.
 
-## Raw Evidence
+## Published Evidence
 
-Full operation chain, Sysmon event excerpts, and the Defender detection
+Selected operation-chain entries, Sysmon event excerpts, and a Defender detection
 record are preserved in
 [`reports/operations/sapphros-detection-validation-v1.json`](../reports/operations/sapphros-detection-validation-v1.json).
+
+The published JSON is an excerpt set, not a full event-log export. See the
+[validation method and evidence limits](validation-methodology.md) for the
+manual scoring process, automation boundaries, and remaining verification work.
 
 ## Lessons Learned
 
